@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  /* Mapping semantic names to CSS variables */
+  --color-background: var(--background);
+  --color-on-surface: var(--on-surface);
+  --color-primary: var(--primary);
+  --color-surface-container: var(--surface-container);
+  --color-outline-variant: var(--outline-variant);
+}
+
+@layer base {
+  /* Default (Light) Theme Variables */
+  :root {
+    --background: #f8fafc; /* Slate-50 */
+    --on-surface: #0f172a; /* Slate-900 */
+    --primary: #2563eb;    /* Blue-600 */
+    --surface-container: #ffffff;
+    --outline-variant: #e2e8f0;
+  }
+
+  /* Dark Theme Variables */
+  .dark {
+    --background: #131313;
+    --on-surface: #e5e2e1;
+    --primary: #adc6ff;
+    --surface-container: #1c1b1b;
+    --outline-variant: #353534;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--on-surface);
+  }
+}
