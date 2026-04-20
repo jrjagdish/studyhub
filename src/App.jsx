@@ -5,6 +5,7 @@ import StudyHub from "./pages/home";
 import QuantumReader from "./pages/reader";
 import Listen from "./pages/listen";
 import QuantumChat from "./pages/chat";
+import UploadPage from "./pages/upload";
 
 const App = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -23,6 +24,7 @@ const App = () => {
         <Route path="/reader" element={<QuantumReader />} />
         <Route path="/listen" element={<Listen />} />
         <Route path="/chat" element={<QuantumChat />} />
+        <Route path="/upload" element={<UploadPage />} />
 
         {/* Add other routes here */}
       </Routes>
