@@ -1,23 +1,18 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import {
-  Database,
-  Terminal,
-  Cpu,
-  Sigma,
-  PlayCircle,
-  Search,
-  Headphones,
-  MoreVertical,
-  Loader2
+  Database, Terminal, Cpu, Sigma, PlayCircle, Search, 
+  Headphones, MoreVertical, Loader2, ArrowLeft, Download, FileText
 } from "lucide-react";
 
 const StudyHub = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [isViewing, setIsViewing] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
-  // Map backend subject names to Lucide icons
   const iconMap = {
     "DBMS": <Database size={22} />,
     "C++": <Terminal size={22} />,
@@ -25,62 +20,123 @@ const StudyHub = () => {
     "Math": <Sigma size={22} />,
   };
 
-  // Fetch all notes from FastAPI on mount
   useEffect(() => {
-    const fetchNotes = async () => {
-      try {
-        const response = await axios.get("http://localhost:8000/notes");
-        setNotes(response.data);
-      } catch (error) {
-        console.error("Error fetching notes:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchNotes();
+    loadAllNotes();
   }, []);
 
-  const handleReadPDF = async (id) => {
+  const loadAllNotes = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/notes/${id}`);
-      // The response.data contains the Cloudinary URL
-      window.open(response.data, "_blank");
+      const response = await fetch("http://localhost:8000/notes");
+      const data = await response.json();
+      setNotes(data);
     } catch (error) {
-      alert("Could not open PDF");
+      console.error("Error loading notes:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleReadPDF = async (id) => {
+    setPdfLoading(true);
+    try {
+      // 1. Get the Cloudinary URL from FastAPI
+      const response = await fetch(`http://localhost:8000/notes/${id}`);
+      if (!response.ok) throw new Error("Failed to fetch document URL");
+      
+      let url = await response.json();
+
+      // 2. Transform URL for inline viewing
+      if (url.includes("cloudinary.com")) {
+        // fl_inline tells the browser to render the PDF instead of downloading it
+        url = url.replace("/upload/fl_inline/","/upload/");
+      }
+
+      setPdfUrl(url);
+      setIsViewing(true);
+    } catch (error) {
+      console.error("PDF Error:", error);
+      alert("Could not open PDF. Check backend and Cloudinary settings.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const closeReader = () => {
+    setIsViewing(false);
+    setPdfUrl(null);
+  };
+
+  // --- PDF READER VIEW ---
+  if (isViewing && pdfUrl) {
+    return (
+      <div className="fixed inset-0 z-50 bg-white dark:bg-[#0F0F0F] flex flex-col animate-in fade-in duration-300">
+        <nav className="h-16 border-b dark:border-white/10 flex items-center justify-between px-6 bg-white dark:bg-[#1C1B1B]">
+          <div className="flex items-center gap-4">
+            <button onClick={closeReader} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full text-slate-900 dark:text-white">
+              <ArrowLeft size={24} />
+            </button>
+            <h2 className="font-bold dark:text-white">Document Reader</h2>
+          </div>
+          <div className="flex items-center gap-3">
+             <a 
+              href={pdfUrl.replace("/upload/fl_inline/", "/upload/")} 
+              download
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700"
+            >
+              <Download size={18} /> Save Copy
+            </a>
+          </div>
+        </nav>
+
+        <div className="flex-1 bg-slate-700 flex justify-center overflow-hidden">
+          {/* Using <object> is better for PDF embedding than <iframe> */}
+          <object
+            data={pdfUrl}
+            type="application/pdf"
+            className="w-full h-full"
+          >
+            {/* Fallback iframe */}
+            <img src={pdfUrl} className="w-full h-full" title="PDF Reader" />
+          </object>
+        </div>
+      </div>
+    );
+  }
+
+  // --- DASHBOARD VIEW ---
   return (
-    <div className="p-6 md:p-12 overflow-x-hidden min-h-screen bg-slate-50 dark:bg-[#0F0F0F] dark:text-white">
+    <div className="p-6 md:p-12 min-h-screen bg-slate-50 dark:bg-[#0F0F0F] dark:text-white">
+      {pdfLoading && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl flex flex-col items-center">
+            <Loader2 className="animate-spin text-blue-500 mb-4" size={40} />
+            <p className="font-bold">Opening Syllabus...</p>
+          </div>
+        </div>
+      )}
+
       <header className="mb-8">
-        <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-3">
-          BCA Portal
-        </h1>
-        <p className="text-slate-500 dark:text-[#C2C6D6] text-lg max-w-xl font-medium leading-relaxed">
-          Your syllabus, automated. Read PDFs or listen to AI-summaries.
-        </p>
+        <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-3">BCA Portal</h1>
+        <p className="text-slate-500 dark:text-[#C2C6D6] text-lg max-w-xl font-medium">Your study material, simplified.</p>
       </header>
 
-      {/* Search Bar */}
-      <div className="relative mb-10 max-w-2xl group">
-        <Search
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors"
-          size={20}
-        />
+      <div className="relative mb-10 max-w-2xl">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search for subjects, notes, or assignments..."
-          className="w-full pl-12 pr-4 py-4 bg-white dark:bg-[#1C1B1B] border border-slate-200 dark:border-white/5 rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all shadow-sm"
+          placeholder="Search subjects..."
+          className="w-full pl-12 pr-4 py-4 bg-white dark:bg-[#1C1B1B] border dark:border-white/5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
-      {/* Subject Grid */}
       {loading ? (
-        <div className="flex justify-center p-20"><Loader2 className="animate-spin text-blue-500" size={40} /></div>
+        <div className="flex justify-center p-20">
+          <Loader2 className="animate-spin text-blue-500" size={40} />
+        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {notes
             .filter((n) => n.title.toLowerCase().includes(searchQuery.toLowerCase()))
             .map((note) => (
@@ -91,52 +147,19 @@ const StudyHub = () => {
               >
                 <div className="flex justify-between items-start mb-6">
                   <div className="p-3 bg-slate-50 dark:bg-[#2A2A2A] rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                    {iconMap[note.title] || <Database size={22} />}
+                    {iconMap[note.title] || <FileText size={22} />}
                   </div>
-                  <button className="text-slate-300 hover:text-slate-600">
-                    <MoreVertical size={18} />
-                  </button>
+                  <MoreVertical size={18} className="text-slate-300" />
                 </div>
                 <h3 className="text-xl font-bold mb-1">{note.title}</h3>
-                <p className="text-xs text-slate-500 mb-5">
-                  Click to view full notes
-                </p>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                    <span>Status</span>
-                    <span>Ready</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-slate-100 dark:bg-[#2A2A2A] rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 w-full"></div>
-                  </div>
+                <p className="text-xs text-slate-500 mb-5 uppercase tracking-wider">Unit: {note.unit || "N/A"}</p>
+                <div className="h-1 w-full bg-slate-100 dark:bg-[#2A2A2A] rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 w-full"></div>
                 </div>
               </div>
             ))}
         </div>
       )}
-
-      {/* Featured AI Audiobook Section */}
-      <section className="relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-[2rem] p-8 md:p-12 shadow-xl">
-        <div className="absolute top-0 right-0 p-8 opacity-10 hidden lg:block">
-          <Headphones size={200} className="text-blue-600" />
-        </div>
-        <div className="relative z-10 max-w-xl">
-          <span className="bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-[10px] uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-6 block w-fit">
-            AI-Generated Audiobook
-          </span>
-          <h2 className="text-3xl md:text-5xl font-black mb-6 leading-tight">
-            Master DBMS while you walk.
-          </h2>
-          <p className="text-slate-600 dark:text-slate-300 text-lg mb-8">
-            Listen to a clear, 5-minute audio summary focusing on Normalization and Joins.
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <button className="bg-slate-900 dark:bg-blue-500 text-white py-4 px-10 rounded-2xl font-bold flex items-center gap-3 hover:scale-105 transition-transform">
-              <PlayCircle size={24} /> Listen Now
-            </button>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

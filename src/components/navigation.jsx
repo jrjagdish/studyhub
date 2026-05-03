@@ -10,7 +10,7 @@ const Navigation = ({ isDarkMode, toggleTheme, children }) => {
 
   const navItems = [
     { id: "home", label: "Home", path: "/", icon: <Home size={20} /> },
-    { id: "read", label: "Read Notes", path: "/reader", icon: <BookOpen size={20} /> },
+    //{ id: "read", label: "Read Notes", path: "/reader", icon: <BookOpen size={20} /> },
     { id: "listen", label: "Listen Mode", path: "/listen", icon: <Headphones size={20} /> },
     { id: "chat", label: "Ask AI Chat", path: "/chat", icon: <MessageSquare size={20} /> },
   ];
